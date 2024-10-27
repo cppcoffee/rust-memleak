@@ -227,7 +227,7 @@ async fn dump_to_file(path: &Path, map: &HashMap<String, u64>) -> Result<()> {
             .context(format!("failed to write file: {:?}", path))?;
     }
 
-    info!("dump stack frame to {:?}", map.len(), path);
+    info!("dump stack frame to {:?}", path);
 
     Ok(())
 }
