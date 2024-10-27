@@ -141,6 +141,7 @@ fn attach_uprobes(ebpf: &mut Ebpf, bin: &Path, pid: Option<i32>) -> Result<()> {
 }
 
 async fn dump_stack_frames(ebpf: &mut Ebpf, pid: pid_t) -> Result<HashMap<String, u64>> {
+    let mut count = 0;
     let mut result: HashMap<String, u64> = HashMap::new();
     let mut buffer = String::with_capacity(4096);
 
@@ -200,7 +201,11 @@ async fn dump_stack_frames(ebpf: &mut Ebpf, pid: pid_t) -> Result<HashMap<String
         }
 
         *result.entry(buffer.clone()).or_default() += heap_size;
+
+        count += 1;
     }
+
+    info!("total {} stack frames, collapse to {}", count, result.len());
 
     Ok(result)
 }
@@ -222,7 +227,7 @@ async fn dump_to_file(path: &Path, map: &HashMap<String, u64>) -> Result<()> {
             .context(format!("failed to write file: {:?}", path))?;
     }
 
-    info!("total {} frame, dump stack frame to {:?}", map.len(), path);
+    info!("dump stack frame to {:?}", map.len(), path);
 
     Ok(())
 }
