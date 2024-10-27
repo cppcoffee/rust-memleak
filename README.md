@@ -69,7 +69,10 @@ Generating flame graphs:
 # ./FlameGraph/flamegraph.pl /tmp/memleak.out > /tmp/1.svg
 ```
 
+Flame graph:
+
 ![flamegraph](img/flamegraph.svg)
+
 
 ## Reference
 
