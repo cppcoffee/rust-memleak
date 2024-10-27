@@ -79,11 +79,18 @@ async fn main() -> Result<()> {
 
     attach_uprobes(&mut ebpf, &exe_path, Some(opt.pid))?;
 
-    // TODO: more debug message
+    info!("attached uprobes to {}", exe_path.display());
 
-    // TODO: sleep and ctrl_c, both are supported
-    //tokio::signal::ctrl_c().await?;
-    sleep(Duration::from_secs(opt.interval)).await;
+    info!("wait for {}s or press ctrl+c to start dump", opt.interval);
+
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {
+            info!("received Ctrl-C, dump stack frames starting...")
+        },
+        _ = sleep(Duration::from_secs(opt.interval)) => {
+            info!("time is up, dump stack frames starting...")
+        }
+    }
 
     let map = dump_stack_frames(&mut ebpf, opt.pid).await?;
     dump_to_file(&opt.output, &map).await?;
@@ -215,7 +222,7 @@ async fn dump_to_file(path: &Path, map: &HashMap<String, u64>) -> Result<()> {
             .context(format!("failed to write file: {:?}", path))?;
     }
 
-    info!("dump stack frame to {:?}", path);
+    info!("total {} frame, dump stack frame to {:?}", map.len(), path);
 
     Ok(())
 }
