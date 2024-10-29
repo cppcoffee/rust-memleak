@@ -99,43 +99,23 @@ async fn main() -> Result<()> {
 }
 
 fn attach_uprobes(ebpf: &mut Ebpf, bin: &Path, pid: Option<i32>) -> Result<()> {
-    // __rust_alloc
-    let program: &mut UProbe = ebpf.program_mut("rust_alloc_enter").unwrap().try_into()?;
-    program.load()?;
-    program.attach(Some("__rust_alloc"), 0, &bin, pid)?;
+    let probes = [
+        ("__rust_alloc", "rust_alloc_enter"),
+        ("__rust_alloc", "rust_alloc_exit"),
+        ("__rust_dealloc", "rust_dealloc_enter"),
+        ("__rust_realloc", "rust_realloc_enter"),
+        ("__rust_realloc", "rust_realloc_exit"),
+        ("__rust_alloc_zeroed", "rust_alloc_zeroed_enter"),
+        ("__rust_alloc_zeroed", "rust_alloc_zeroed_exit"),
+    ];
 
-    let program: &mut UProbe = ebpf.program_mut("rust_alloc_exit").unwrap().try_into()?;
-    program.load()?;
-    program.attach(Some("__rust_alloc"), 0, &bin, pid)?;
+    for probe in &probes {
+        debug!("attach uprobe {} to {}", probe.1, probe.0);
 
-    // __rust_dealloc
-    let program: &mut UProbe = ebpf.program_mut("rust_dealloc_enter").unwrap().try_into()?;
-    program.load()?;
-    program.attach(Some("__rust_dealloc"), 0, &bin, pid)?;
-
-    let program: &mut UProbe = ebpf.program_mut("rust_realloc_enter").unwrap().try_into()?;
-    program.load()?;
-    program.attach(Some("__rust_realloc"), 0, &bin, pid)?;
-
-    // __rust_realloc
-    let program: &mut UProbe = ebpf.program_mut("rust_realloc_exit").unwrap().try_into()?;
-    program.load()?;
-    program.attach(Some("__rust_realloc"), 0, &bin, pid)?;
-
-    // __rust_alloc_zeroed
-    let program: &mut UProbe = ebpf
-        .program_mut("rust_alloc_zeroed_enter")
-        .unwrap()
-        .try_into()?;
-    program.load()?;
-    program.attach(Some("__rust_alloc_zeroed"), 0, &bin, pid)?;
-
-    let program: &mut UProbe = ebpf
-        .program_mut("rust_alloc_zeroed_exit")
-        .unwrap()
-        .try_into()?;
-    program.load()?;
-    program.attach(Some("__rust_alloc_zeroed"), 0, &bin, pid)?;
+        let program: &mut UProbe = ebpf.program_mut(probe.1).unwrap().try_into()?;
+        program.load()?;
+        program.attach(Some(probe.0), 0, &bin, pid)?;
+    }
 
     Ok(())
 }
