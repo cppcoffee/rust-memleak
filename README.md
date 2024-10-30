@@ -19,6 +19,12 @@ Cargo build scripts are used to automatically build the eBPF correctly and inclu
 program. When not using `xtask run`, eBPF code generation is skipped for a faster developer
 experience; this compromise necessitates the use of `xtask` to actually build the eBPF.
 
+Compiling project:
+
+```shell
+$ AYA_BUILD_EBPF=true cargo build --release
+```
+
 
 ## Cross-compiling on macOS
 
@@ -32,7 +38,6 @@ AYA_BUILD_EBPF=true CC=${ARCH}-linux-musl-gcc cargo build --package rust-memleak
 The cross-compiled program `target/${ARCH}-unknown-linux-musl/release/rust-memleak` can be
 copied to a Linux server or VM and run there.
 
-
 ## Notice
 
 1. `aya v0.13.0` requires rustc 1.80.0 or newer.
@@ -40,7 +45,7 @@ copied to a Linux server or VM and run there.
 2. The target Rust application needs to enable stack frame compilation:
 
 ```
-RUSTFLAGS="-C force-frame-pointers=yes" cargo build
+$ RUSTFLAGS="-C force-frame-pointers=yes" cargo build
 ```
 
 ## Usage
