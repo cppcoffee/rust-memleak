@@ -76,7 +76,7 @@ Generating flame graphs:
 
 Flame graph:
 
-![flamegraph](img/flamegraph.svg)
+![flamegraph](img/1.svg)
 
 
 ## Reference
