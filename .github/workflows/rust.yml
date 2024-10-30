@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install toolchain
-      run: cargo install bpf-linker
+      run: rustup toolchain install nightly --component rust-src && cargo install bpf-linker
     - name: Build
       run: AYA_BUILD_EBPF=true cargo check --verbose
     - name: Run tests
