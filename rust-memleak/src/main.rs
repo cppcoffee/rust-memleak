@@ -43,11 +43,11 @@ struct Opt {
 async fn main() -> Result<()> {
     let opt = Opt::parse();
 
-    if opt.verbose {
-        env::var("RUST_LOG")
-            .err()
-            .map(|_| env::set_var("RUST_LOG", "debug"));
-    }
+    let s = if opt.verbose { "debug" } else { "info" };
+
+    env::var("RUST_LOG")
+        .err()
+        .map(|_| env::set_var("RUST_LOG", s));
 
     env_logger::init();
 
