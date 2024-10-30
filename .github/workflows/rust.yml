@@ -16,7 +16,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Install toolchain
+      run: cargo install bpf-linker
     - name: Build
-      run: AYA_BUILD_EBPF=true cargo build --verbose
+      run: AYA_BUILD_EBPF=true cargo check --verbose
     - name: Run tests
       run: cargo test --verbose
