@@ -137,7 +137,8 @@ fn gen_alloc_entry(ctx: &ProbeContext, size: usize, align: usize) -> Result<u32,
 
     SIZES.insert(&tid, &size_rounded_up, 0)?;
 
-    if TRACE_ALL {
+    let trace_all = unsafe { core::ptr::read_volatile(&TRACE_ALL) };
+    if trace_all {
         info!(ctx, "alloc entered, size={}", size_rounded_up);
     }
 
@@ -162,7 +163,8 @@ fn gen_alloc_exit(ctx: &RetProbeContext, ptr: u64) -> Result<u32, c_long> {
     let value = AllocInfo::new(*sz, timestamp_ns, stack_id);
     ALLOCS.insert(&ptr, &value, 0)?;
 
-    if TRACE_ALL {
+    let trace_all = unsafe { core::ptr::read_volatile(&TRACE_ALL) };
+    if trace_all {
         info!(ctx, "alloc exited, size = {}, result = {:x}", *sz, ptr);
     }
 
@@ -174,7 +176,8 @@ fn gen_free_enter(ctx: &ProbeContext, ptr: u64) -> Result<u32, c_long> {
 
     ALLOCS.remove(&ptr)?;
 
-    if TRACE_ALL {
+    let trace_all = unsafe { core::ptr::read_volatile(&TRACE_ALL) };
+    if trace_all {
         info!(
             ctx,
             "dealloc entered, address={:x}, size={}\n", ptr, alloc_info.size
