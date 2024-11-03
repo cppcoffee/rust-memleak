@@ -8,7 +8,7 @@ use anyhow::{anyhow, Context, Result};
 use aya::maps::{HashMap as EbpfHashMap, StackTraceMap};
 use aya::programs::UProbe;
 use aya::util::kernel_symbols;
-use aya::Ebpf;
+use aya::{Btf, Ebpf, EbpfLoader};
 use blazesym::symbolize::{Input, Process, Source, Symbolizer};
 use blazesym::Pid;
 use clap::Parser;
@@ -71,10 +71,13 @@ async fn main() -> Result<()> {
     // runtime. This approach is recommended for most real-world use cases. If you would
     // like to specify the eBPF program at runtime rather than at compile-time, you can
     // reach for `Bpf::load_file` instead.
-    let mut ebpf = aya::Ebpf::load(aya::include_bytes_aligned!(concat!(
-        env!("OUT_DIR"),
-        "/rust-memleak"
-    )))?;
+    let mut ebpf = EbpfLoader::new()
+        .btf(Btf::from_sys_fs().ok().as_ref())
+        .set_global("TRACE_ALL", &(opt.verbose as u8), true)
+        .load(aya::include_bytes_aligned!(concat!(
+            env!("OUT_DIR"),
+            "/rust-memleak"
+        )))?;
     if let Err(e) = aya_log::EbpfLogger::init(&mut ebpf) {
         // This can happen if you remove all log statements from your eBPF program.
         warn!("failed to initialize eBPF logger: {}", e);
