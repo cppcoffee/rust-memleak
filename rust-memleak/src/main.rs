@@ -18,7 +18,7 @@ use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 use tokio::time::sleep;
 
-use rust_memleak::util::get_binary_path_by_pid;
+use rust_memleak::util::{dump_to_file, get_binary_path_by_pid};
 use rust_memleak_common::AllocInfo;
 
 #[derive(Debug, Parser)]
@@ -54,7 +54,7 @@ async fn main() -> Result<()> {
 
     env_logger::init();
 
-    let exe_path = opt.bin.unwrap_or(get_binary_path_by_pid(opt.pid)?);
+    let exe_path = opt.bin.unwrap_or(get_binary_path_by_pid(opt.pid).await?);
 
     // Bump the memlock rlimit. This is needed for older kernels that don't use the
     // new memcg based accounting, see https://lwn.net/Articles/837122/
@@ -100,6 +100,8 @@ async fn main() -> Result<()> {
 
     let map = dump_stack_frames(&mut ebpf, opt.pid).await?;
     dump_to_file(&opt.output, &map).await?;
+
+    info!("dump stack frame to {:?}", opt.output);
 
     Ok(())
 }
@@ -188,26 +190,4 @@ fn ksymbols_search(ksyms: &BTreeMap<u64, String>, ip: u64) -> Option<String> {
     };
 
     Some(result)
-}
-
-async fn dump_to_file(path: &Path, map: &HashMap<String, u64>) -> Result<()> {
-    let mut file = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(path)
-        .await
-        .context(format!("failed to open file: {:?}", path))?;
-
-    for (k, v) in map.iter() {
-        let s = format!("{} {}\n", k, v);
-
-        file.write_all(s.as_bytes())
-            .await
-            .context(format!("failed to write file: {:?}", path))?;
-    }
-
-    info!("dump stack frame to {:?}", path);
-
-    Ok(())
 }
