@@ -154,7 +154,10 @@ fn gen_alloc_exit(ctx: &RetProbeContext, ptr: u64) -> Result<u32, c_long> {
 
     let tid = bpf_get_current_pid_tgid() as u32;
 
-    let sz = unsafe { SIZES.get(&tid).ok_or(1)? };
+    let sz = match unsafe { SIZES.get(&tid) } {
+        Some(sz) => sz,
+        None => return Ok(0),
+    };
     SIZES.remove(&tid)?;
 
     let timestamp_ns = unsafe { bpf_ktime_get_ns() };
@@ -172,7 +175,10 @@ fn gen_alloc_exit(ctx: &RetProbeContext, ptr: u64) -> Result<u32, c_long> {
 }
 
 fn gen_free_enter(ctx: &ProbeContext, ptr: u64) -> Result<u32, c_long> {
-    let alloc_info = unsafe { ALLOCS.get(&ptr).ok_or(1)? };
+    let alloc_info = match unsafe { ALLOCS.get(&ptr) } {
+        Some(info) => info,
+        None => return Ok(0),
+    };
 
     ALLOCS.remove(&ptr)?;
 

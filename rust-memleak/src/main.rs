@@ -14,8 +14,6 @@ use blazesym::Pid;
 use clap::Parser;
 use libc::pid_t;
 use log::{debug, info, warn};
-use tokio::fs::OpenOptions;
-use tokio::io::AsyncWriteExt;
 use tokio::time::sleep;
 
 use rust_memleak::util::{dump_to_file, get_binary_path_by_pid};
