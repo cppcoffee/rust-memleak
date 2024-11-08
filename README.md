@@ -25,6 +25,12 @@ Compiling project:
 $ AYA_BUILD_EBPF=true cargo build --release
 ```
 
+or
+
+```shell
+$ make
+```
+
 
 ## Cross-compiling on macOS
 
