@@ -148,10 +148,6 @@ fn gen_alloc_entry(ctx: &ProbeContext, size: usize, align: usize) -> Result<u32,
 fn gen_alloc_exit(ctx: &RetProbeContext, ptr: u64) -> Result<u32, c_long> {
     const STACK_FLAGS: u32 = BPF_F_USER_STACK | BPF_F_FAST_STACK_CMP | BPF_F_REUSE_STACKID;
 
-    if ptr == 0 {
-        return Ok(0);
-    }
-
     let tid = bpf_get_current_pid_tgid() as u32;
 
     let sz = match unsafe { SIZES.get(&tid) } {
@@ -159,6 +155,10 @@ fn gen_alloc_exit(ctx: &RetProbeContext, ptr: u64) -> Result<u32, c_long> {
         None => return Ok(0),
     };
     SIZES.remove(&tid)?;
+
+    if ptr == 0 {
+        return Ok(0);
+    }
 
     let timestamp_ns = unsafe { bpf_ktime_get_ns() };
     let stack_id = unsafe { STACK_TRACES.get_stackid(ctx, STACK_FLAGS as u64)? };
