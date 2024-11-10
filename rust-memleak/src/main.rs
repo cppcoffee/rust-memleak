@@ -28,8 +28,8 @@ struct Opt {
     #[clap(short, long, help = "binary path [optional]")]
     bin: Option<PathBuf>,
 
-    #[clap(short, long, default_value = "10", help = "interval in seconds")]
-    interval: u64,
+    #[clap(short, long, default_value = "30", help = "timeout in seconds")]
+    timeout: u64,
 
     #[clap(short, long, default_value = "/tmp/memleak.out", help = "output file")]
     output: PathBuf,
@@ -86,13 +86,13 @@ async fn main() -> Result<()> {
 
     info!("attached uprobes to {}", exe_path.display());
 
-    info!("wait for {}s or press ctrl+c to start dump", opt.interval);
+    info!("wait for {}s or press ctrl+c to start dump", opt.timeout);
 
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {
             info!("received Ctrl-C, dump stack frames starting...")
         },
-        _ = sleep(Duration::from_secs(opt.interval)) => {
+        _ = sleep(Duration::from_secs(opt.timeout)) => {
             info!("time is up, dump stack frames starting...")
         }
     }
