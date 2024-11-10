@@ -10,7 +10,7 @@ use aya::maps::{HashMap as EbpfHashMap, StackTraceMap};
 use aya::programs::UProbe;
 use aya::util::kernel_symbols;
 use aya::{Btf, Ebpf, EbpfLoader};
-use blazesym::symbolize::{Input, Process, Source, Symbolizer};
+use blazesym::symbolize::{CodeInfo, Input, Process, Source, Sym, Symbolizer};
 use blazesym::Pid;
 use clap::Parser;
 use libc::pid_t;
@@ -178,7 +178,7 @@ fn symbolize_stack_frames(
         }
 
         let name = match sym.as_sym() {
-            Some(x) => format!("{}+0x{:x}", x.name, x.offset),
+            Some(x) => format_symbolize(x),
             None => {
                 ksymbols_search(ksyms, *addr).unwrap_or_else(|| format!("unknown_0x{:08x}", addr))
             }
@@ -188,6 +188,44 @@ fn symbolize_stack_frames(
     }
 
     Ok(buffer)
+}
+
+fn format_symbolize(sym: &Sym<'_>) -> String {
+    let mut s = sym.name.to_string();
+
+    if let Some(code_info) = &sym.code_info {
+        s += format!(" ({})", format_code_info(&code_info)).as_ref();
+    } else {
+        if sym.inlined.len() > 0 {
+            let inlined = &sym.inlined[0];
+
+            s += format!(" <inlined:{}>", inlined.name).as_ref();
+
+            if let Some(code_info) = &inlined.code_info {
+                s += format!(" ({})", format_code_info(&code_info)).as_ref();
+            }
+        }
+    }
+
+    s += format!(" +0x{:x}", sym.offset).as_ref();
+
+    s
+}
+
+fn format_code_info(code_info: &CodeInfo<'_>) -> String {
+    match (code_info.dir.as_ref(), code_info.line) {
+        (Some(dir), Some(line)) => {
+            format!(
+                "{}/{}:{}",
+                dir.display(),
+                code_info.file.to_string_lossy(),
+                line
+            )
+        }
+        (Some(dir), None) => format!("{}/{}", dir.display(), code_info.file.to_string_lossy()),
+        (None, Some(line)) => format!("{}:{}", code_info.file.to_string_lossy(), line),
+        (None, None) => format!("{}", code_info.file.to_string_lossy()),
+    }
 }
 
 fn ksymbols_search(ksyms: &BTreeMap<u64, String>, ip: u64) -> Option<String> {
