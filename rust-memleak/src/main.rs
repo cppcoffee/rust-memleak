@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
+use aya::maps::stack_trace::StackTrace;
 use aya::maps::{HashMap as EbpfHashMap, StackTraceMap};
 use aya::programs::UProbe;
 use aya::util::kernel_symbols;
@@ -129,11 +130,9 @@ fn attach_uprobes(ebpf: &mut Ebpf, bin: &Path, pid: Option<i32>) -> Result<()> {
 async fn dump_stack_frames(ebpf: &mut Ebpf, pid: pid_t) -> Result<HashMap<String, u64>> {
     let mut count = 0;
     let mut result: HashMap<String, u64> = HashMap::new();
-    let mut buffer = String::with_capacity(1024);
 
     let src = Source::Process(Process::new(Pid::Pid(NonZeroU32::new(pid as u32).unwrap())));
     let symbolizer = Symbolizer::new();
-
     let ksyms = kernel_symbols().context("failed to load kernel symbols")?;
 
     let stack_traces = StackTraceMap::try_from(ebpf.map("STACK_TRACES").unwrap())?;
@@ -145,29 +144,11 @@ async fn dump_stack_frames(ebpf: &mut Ebpf, pid: pid_t) -> Result<HashMap<String
 
         let heap_size = value.size;
         let stack_id = value.stack_id as u32;
+
         let stack_trace = stack_traces.get(&stack_id, 0)?;
+        let stack_frame = symbolize_stack_frames(&stack_trace, &symbolizer, &src, &ksyms)?;
 
-        let addrs: Vec<_> = stack_trace.frames().iter().rev().map(|x| x.ip).collect();
-        let syms = symbolizer
-            .symbolize(&src, Input::AbsAddr(&addrs))
-            .map_err(|e| anyhow!(format!("symbolize fail: {}", e)))?;
-
-        buffer.clear();
-
-        for (sym, addr) in syms.iter().zip(addrs.iter()) {
-            let name = match sym.as_sym() {
-                Some(x) => format!("{}+0x{:x}", x.name, x.offset),
-                None => ksymbols_search(&ksyms, *addr).unwrap_or(format!("unknown_0x{:08x}", addr)),
-            };
-
-            if buffer.len() > 0 {
-                buffer.push(';');
-            }
-
-            buffer.push_str(&name);
-        }
-
-        *result.entry(buffer.clone()).or_default() += heap_size;
+        *result.entry(stack_frame).or_default() += heap_size;
 
         count += 1;
     }
@@ -175,6 +156,38 @@ async fn dump_stack_frames(ebpf: &mut Ebpf, pid: pid_t) -> Result<HashMap<String
     info!("total {} stack frames, collapse to {}", count, result.len());
 
     Ok(result)
+}
+
+fn symbolize_stack_frames(
+    stack_trace: &StackTrace,
+    symbolizer: &Symbolizer,
+    src: &Source,
+    ksyms: &BTreeMap<u64, String>,
+) -> Result<String> {
+    let addrs: Vec<_> = stack_trace.frames().iter().rev().map(|x| x.ip).collect();
+
+    let syms = symbolizer
+        .symbolize(src, Input::AbsAddr(&addrs))
+        .map_err(|e| anyhow!(format!("symbolize fail: {}", e)))?;
+
+    let mut buffer = String::with_capacity(128);
+
+    for (sym, addr) in syms.iter().zip(addrs.iter()) {
+        if !buffer.is_empty() {
+            buffer.push(';');
+        }
+
+        let name = match sym.as_sym() {
+            Some(x) => format!("{}+0x{:x}", x.name, x.offset),
+            None => {
+                ksymbols_search(ksyms, *addr).unwrap_or_else(|| format!("unknown_0x{:08x}", addr))
+            }
+        };
+
+        buffer.push_str(&name);
+    }
+
+    Ok(buffer)
 }
 
 fn ksymbols_search(ksyms: &BTreeMap<u64, String>, ip: u64) -> Option<String> {
