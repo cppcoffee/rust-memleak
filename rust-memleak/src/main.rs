@@ -180,7 +180,13 @@ async fn dump_stack_frames(ebpf: &mut Ebpf, pid: pid_t) -> Result<HashMap<String
 fn ksymbols_search(ksyms: &BTreeMap<u64, String>, ip: u64) -> Option<String> {
     let (sym_addr, name) = ksyms.range(..=ip).next_back()?;
 
-    let result = if ip >= 0xffff800000000000 {
+    let kernel_addr_start = if cfg!(target_pointer_width = "64") {
+        0xFFFF_8000_0000_0000
+    } else {
+        0xC000_0000
+    };
+
+    let result = if ip >= kernel_addr_start {
         let offset = ip - sym_addr;
         format!("{}+0x{:x}", name, offset)
     } else {
