@@ -85,17 +85,9 @@ async fn main() -> Result<()> {
     attach_uprobes(&mut ebpf, &exe_path, Some(opt.pid))?;
 
     info!("attached uprobes to {}", exe_path.display());
-
     info!("wait for {}s or press ctrl+c to start dump", opt.timeout);
 
-    tokio::select! {
-        _ = tokio::signal::ctrl_c() => {
-            info!("received Ctrl-C, dump stack frames starting...")
-        },
-        _ = sleep(Duration::from_secs(opt.timeout)) => {
-            info!("time is up, dump stack frames starting...")
-        }
-    }
+    wait_for_termination_signal(opt.timeout).await;
 
     let map = dump_stack_frames(&mut ebpf, opt.pid).await?;
     dump_to_file(&opt.output, &map).await?;
@@ -103,6 +95,17 @@ async fn main() -> Result<()> {
     info!("dump stack frame to {:?}", opt.output);
 
     Ok(())
+}
+
+async fn wait_for_termination_signal(timeout: u64) {
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {
+            info!("received Ctrl-C, dump stack frames starting...")
+        },
+        _ = sleep(Duration::from_secs(timeout)) => {
+            info!("time is up, dump stack frames starting...")
+        }
+    }
 }
 
 fn attach_uprobes(ebpf: &mut Ebpf, bin: &Path, pid: Option<i32>) -> Result<()> {
