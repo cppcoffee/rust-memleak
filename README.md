@@ -54,7 +54,7 @@ Usage: rust-memleak [OPTIONS] --pid <PID>
 Options:
   -p, --pid <PID>            pid of the process
   -b, --bin <BIN>            binary path [optional]
-  -i, --interval <INTERVAL>  interval in seconds [default: 10]
+  -t, --timeout <TIMEOUT>    timeout in seconds [default: 30]
   -o, --output <OUTPUT>      output file [default: /tmp/memleak.out]
   -v, --verbose              verbose mode
   -h, --help                 Print help
