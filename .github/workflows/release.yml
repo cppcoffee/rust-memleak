@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: rustup toolchain install nightly --component rust-src && cargo install bpf-linker
+
+      - name: Build
+        run: make
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "target/release/rust-memleak"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+permissions:
+  contents: write
