@@ -24,6 +24,7 @@ jobs:
           AYA_BUILD_EBPF=true cargo build --release --target x86_64-unknown-linux-gnu
           cp target/x86_64-unknown-linux-gnu/release/rust-memleak target/rust-memleak-x86_64
 
+      - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: "target/rust-memleak-x86_64"
